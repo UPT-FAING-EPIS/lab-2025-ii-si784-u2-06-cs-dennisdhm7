@@ -17,7 +17,7 @@ jobs:
       - name: 🧩 Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ Configurar .NET (ajustado a tu versión 9.0)
+      # 2️⃣ Configurar .NET 9.0
       - name: ⚙️ Setup .NET
         uses: actions/setup-dotnet@v4
         with:
@@ -41,24 +41,22 @@ jobs:
           dotnet test ./UPTSiteTests/UPTSiteTests.csproj --collect:"XPlat Code Coverage" --logger "trx;LogFileName=test_results.trx"
           echo "✅ Tests executed successfully."
 
-      # 7️⃣ Generar reporte HTML con ReportGenerator
+      # 7️⃣ Generar reporte HTML de cobertura
       - name: 📊 Generate coverage report
         run: |
-          dotnet tool install -g dotnet-reportgenerator-globaltool
-          ReportGenerator "-reports:./UPTSiteTests/TestResults/**/*.xml" "-targetdir:public/Cobertura" -reporttypes:HTML
-        env:
-          PATH: ~/.dotnet/tools:$PATH
+          dotnet tool install dotnet-reportgenerator-globaltool --tool-path tools
+          ./tools/reportgenerator "-reports:./UPTSiteTests/TestResults/**/*.xml" "-targetdir:public/Cobertura" -reporttypes:HTML
 
       # 8️⃣ Copiar videos de Playwright
       - name: 🎥 Copy Playwright videos
         run: |
           mkdir -p public/videos
           find ./UPTSiteTests/bin/Release/net9.0/videos -type f -name "*.webm" -exec cp {} public/videos/ \;
-          echo "Videos copied to public/videos"
+          echo "🎬 Videos copied to public/videos"
 
       # 9️⃣ Publicar resultados en GitHub Pages
-      - name: 🚀 Publish to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+      - name: 🚀 Deploy to GitHub Pages
+        uses: actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./public
