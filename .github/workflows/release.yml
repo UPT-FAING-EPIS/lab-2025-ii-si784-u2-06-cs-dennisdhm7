@@ -1,0 +1,65 @@
+name: 🚀 Release NuGet Package
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: read  # solo lectura, no publica
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Clonar el repositorio
+      - name: 🧩 Checkout repository
+        uses: actions/checkout@v4
+
+      # 2️⃣ Configurar .NET
+      - name: ⚙️ Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      # 3️⃣ Restaurar dependencias
+      - name: 📦 Restore dependencies
+        run: dotnet restore
+
+      # 4️⃣ Compilar el proyecto en modo Release
+      - name: 🏗️ Build project
+        run: dotnet build --configuration Release
+
+      # 5️⃣ Empaquetar el proyecto con tu código de matrícula como versión
+      - name: 📦 Create NuGet package
+        run: |
+          dotnet pack --configuration Release \
+            -p:PackageVersion=2019065161 \
+            -p:Authors="UPT - Calidad y Pruebas de Software" \
+            -p:RepositoryUrl=https://github.com/${{ github.repository }} \
+            -o ./nupkg
+          echo "✅ Paquete NuGet generado en ./nupkg"
+
+      # 6️⃣ Subir el paquete como artefacto (en lugar de publicarlo)
+      - name: 📦 Upload .nupkg artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NuGetPackage
+          path: ./nupkg/*.nupkg
+
+      # 7️⃣ Crear el release correspondiente
+      - name: 🏷️ Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v2019065161
+          name: "Release v2019065161"
+          body: |
+            🎉 **Release automático generado desde GitHub Actions**
+            - Versión: 2019065161  
+            - Generado por el flujo de trabajo `release.yml`  
+            - 📦 El paquete se adjunta como artefacto en esta ejecución.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

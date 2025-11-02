@@ -5,6 +5,10 @@
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <PackageId>UPTSiteTests</PackageId>
+    <Authors>UPT</Authors>
+    <RepositoryUrl>https://github.com/UPT-FAING-EPIS/lab-2025-ii-si784-u2-06-cs-dennisdhm7</RepositoryUrl>
+    
   </PropertyGroup>
 
   <ItemGroup>
