@@ -54,11 +54,15 @@ jobs:
           ./tools/reportgenerator "-reports:./UPTSiteTests/TestResults/**/*.xml" "-targetdir:public/Cobertura" -reporttypes:HTML
 
       # 8️⃣ Copiar videos
-      - name: 🎥 Copy Playwright videos
+      - name: 🎥 Copy Playwright videos (if any)
         run: |
           mkdir -p public/videos
-          find ./UPTSiteTests/bin/Release/net9.0/videos -type f -name "*.webm" -exec cp {} public/videos/ \;
-          echo "🎬 Videos copied to public/videos"
+          if [ -d "./UPTSiteTests/bin/Release/net9.0/videos" ]; then
+            find ./UPTSiteTests/bin/Release/net9.0/videos -type f -name "*.webm" -exec cp {} public/videos/ \;
+            echo "🎬 Videos copied to public/videos"
+          else
+            echo "⚠️ No videos folder found. Skipping copy step."
+          fi
 
       # 9️⃣ Subir artefacto para despliegue
       - name: 📦 Upload artifact
