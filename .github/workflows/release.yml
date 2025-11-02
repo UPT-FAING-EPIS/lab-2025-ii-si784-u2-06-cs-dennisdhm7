@@ -34,7 +34,7 @@ jobs:
         run: dotnet build --configuration Release
 
       # 5️⃣ Empaquetar el proyecto con tu código de matrícula como versión
-      - name: 📦 Create NuGet package
+      - name: 📦 Create NuGet package nuget
         run: |
           dotnet pack --configuration Release \
             -p:PackageVersion=2019065161 \
