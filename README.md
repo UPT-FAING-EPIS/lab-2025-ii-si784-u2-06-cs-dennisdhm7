@@ -137,7 +137,7 @@ public class UPTSiteTest : PageTest
 ```
 7. En el Terminal, ejecutar los siguientes comandos para instalar los drivers de navegadores web necesarios para la ejecución de las pruebas:
 ```Bash
-pwsh bin/Debug/net8.0/playwright.ps1 install
+pwsh bin/Debug/net9.0/playwright.ps1 install
 dotnet test --collect:"XPlat Code Coverage"
 ```
 8. El paso anterior debe producir un resultado satisfactorio como el siguiente. 
@@ -153,20 +153,130 @@ dotnet test -- Playwright.BrowserName=firefox
 ```
 10. En el Terminal, proceder a revisar las trazas generadas por las diferentes pruebas, ejecutar el siguiente comando:
 ```Bash
-pwsh bin/Debug/net8.0/playwright.ps1 show-trace .\bin\Debug\net8.0\playwright-traces\UPTSiteTests.UPTSiteTest.GetSchoolDirectorName.zip
+pwsh bin/Debug/net9.0/playwright.ps1 show-trace .\bin\Debug\net9.0\playwright-traces\UPTSiteTests.UPTSiteTest.GetSchoolDirectorName.zip
 ```
 
-![image](https://github.com/user-attachments/assets/75a15bf9-aa58-4e4f-bc8c-fafdeddb2d98)
+![image](assets/Screenshot_1.png)
 
 11. Finalmente proceder a verificar la cobertura, dentro del proyecto Primes.Tests se dede haber generado una carpeta o directorio TestResults, en el cual posiblemente exista otra subpcarpeta o subdirectorio conteniendo un archivo con nombre `coverage.cobertura.xml`, si existe ese archivo proceder a ejecutar los siguientes comandos desde la linea de comandos abierta anteriomente, de los contrario revisar el paso 8:
 ```
 dotnet tool install -g dotnet-reportgenerator-globaltool
 ReportGenerator "-reports:./*/*/*/coverage.cobertura.xml" "-targetdir:Cobertura" -reporttypes:HTML
 ```
-13. El comando anterior primero proceda instalar una herramienta llamada ReportGenerator (https://reportgenerator.io/) la cual mediante la segunda parte del comando permitira generar un reporte en formato HTML con la cobertura obtenida de la ejecución de las pruebas. Este reporte debe localizarse dentro de una carpeta llamada Cobertura y puede acceder a el abriendo con un navegador de internet el archivo index.htm.
+12. El comando anterior primero proceda instalar una herramienta llamada ReportGenerator (https://reportgenerator.io/) la cual mediante la segunda parte del comando permitira generar un reporte en formato HTML con la cobertura obtenida de la ejecución de las pruebas. Este reporte debe localizarse dentro de una carpeta llamada Cobertura y puede acceder a el abriendo con un navegador de internet el archivo index.htm.
 
 ---
 ## Actividades Encargadas
 1. Adicionar al menos 2 escenarios de prueba mas.
+
+* Agregamos a `UPTSiteTest.cs`
+```
+    [TestMethod]
+    public async Task OpenCampusVirtual()
+    {
+        await Page.GotoAsync("https://www.upt.edu.pe");
+
+        // Cerrar popup
+        await Page.GetByRole(AriaRole.Button, new() { Name = "×" }).ClickAsync();
+
+        // Verificar que el enlace 'Campus Virtual' exista y sea visible
+        var campusLink = Page.GetByRole(AriaRole.Link, new() { Name = "Campus Virtual" });
+        await Expect(campusLink).ToBeVisibleAsync();
+
+        // Clic al enlace y esperar carga
+        await campusLink.ClickAsync();
+
+        // Validar que se haya cargado una página (sin exigir dominio exacto)
+        await Expect(Page).ToHaveURLAsync(new Regex("upt\\.edu\\.pe"));
+    }
+
+
+    [TestMethod]
+    public async Task VerifyAboutUsSection()
+    {
+        await Page.GotoAsync("https://www.upt.edu.pe");
+
+        // Cerrar popup
+        await Page.GetByRole(AriaRole.Button, new() { Name = "×" }).ClickAsync();
+
+        // Clic al primer enlace que contenga "Sobre nosotros"
+        await Page.GetByRole(AriaRole.Link, new() { Name = "Sobre nosotros" }).First.ClickAsync();
+
+        // Verificar texto en la sección abierta
+        await Expect(Page.Locator("body")).ToContainTextAsync("Universidad Privada de Tacna");
+    }
+```
+
 2. Generar una automatización (publish_cov_report.yml), que permita la compilación y pruebas del código (https://playwright.dev/dotnet/docs/ci-intro). Y publicar el reporte de cobertura y los videos generados por las pruebas en un Github Page
+
+* Creamos el archivo `publish_cov_report.yml`
+```
+name: 📊 Publish Coverage & Playwright Reports
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-test-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Clonar el repositorio
+      - name: 🧩 Checkout repository
+        uses: actions/checkout@v4
+
+      # 2️⃣ Configurar .NET (ajustado a tu versión 9.0)
+      - name: ⚙️ Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      # 3️⃣ Restaurar dependencias
+      - name: 📦 Restore dependencies
+        run: dotnet restore ./UPTSiteTests/UPTSiteTests.csproj
+
+      # 4️⃣ Compilar proyecto
+      - name: 🏗️ Build project
+        run: dotnet build ./UPTSiteTests/UPTSiteTests.csproj --configuration Release
+
+      # 5️⃣ Instalar navegadores Playwright
+      - name: 🌐 Install Playwright browsers
+        run: pwsh ./UPTSiteTests/bin/Release/net9.0/playwright.ps1 install
+
+      # 6️⃣ Ejecutar pruebas con cobertura
+      - name: 🧪 Run Playwright tests with coverage
+        run: |
+          dotnet test ./UPTSiteTests/UPTSiteTests.csproj --collect:"XPlat Code Coverage" --logger "trx;LogFileName=test_results.trx"
+          echo "✅ Tests executed successfully."
+
+      # 7️⃣ Generar reporte HTML con ReportGenerator
+      - name: 📊 Generate coverage report
+        run: |
+          dotnet tool install -g dotnet-reportgenerator-globaltool
+          ReportGenerator "-reports:./UPTSiteTests/TestResults/**/*.xml" "-targetdir:public/Cobertura" -reporttypes:HTML
+        env:
+          PATH: ~/.dotnet/tools:$PATH
+
+      # 8️⃣ Copiar videos de Playwright
+      - name: 🎥 Copy Playwright videos
+        run: |
+          mkdir -p public/videos
+          find ./UPTSiteTests/bin/Release/net9.0/videos -type f -name "*.webm" -exec cp {} public/videos/ \;
+          echo "Videos copied to public/videos"
+
+      # 9️⃣ Publicar resultados en GitHub Pages
+      - name: 🚀 Publish to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
+          publish_branch: gh-pages
+
+```
+
 3. Generar una automatización (release.yml) que: * Genere el nuget con su codigo de matricula como version del componente, * Publique el nuget en Github Packages, * Genere el release correspondiente.

@@ -1,0 +1,65 @@
+name: 📊 Publish Coverage & Playwright Reports
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-test-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Clonar el repositorio
+      - name: 🧩 Checkout repository
+        uses: actions/checkout@v4
+
+      # 2️⃣ Configurar .NET (ajustado a tu versión 9.0)
+      - name: ⚙️ Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      # 3️⃣ Restaurar dependencias
+      - name: 📦 Restore dependencies
+        run: dotnet restore ./UPTSiteTests/UPTSiteTests.csproj
+
+      # 4️⃣ Compilar proyecto
+      - name: 🏗️ Build project
+        run: dotnet build ./UPTSiteTests/UPTSiteTests.csproj --configuration Release
+
+      # 5️⃣ Instalar navegadores Playwright
+      - name: 🌐 Install Playwright browsers
+        run: pwsh ./UPTSiteTests/bin/Release/net9.0/playwright.ps1 install
+
+      # 6️⃣ Ejecutar pruebas con cobertura
+      - name: 🧪 Run Playwright tests with coverage
+        run: |
+          dotnet test ./UPTSiteTests/UPTSiteTests.csproj --collect:"XPlat Code Coverage" --logger "trx;LogFileName=test_results.trx"
+          echo "✅ Tests executed successfully."
+
+      # 7️⃣ Generar reporte HTML con ReportGenerator
+      - name: 📊 Generate coverage report
+        run: |
+          dotnet tool install -g dotnet-reportgenerator-globaltool
+          ReportGenerator "-reports:./UPTSiteTests/TestResults/**/*.xml" "-targetdir:public/Cobertura" -reporttypes:HTML
+        env:
+          PATH: ~/.dotnet/tools:$PATH
+
+      # 8️⃣ Copiar videos de Playwright
+      - name: 🎥 Copy Playwright videos
+        run: |
+          mkdir -p public/videos
+          find ./UPTSiteTests/bin/Release/net9.0/videos -type f -name "*.webm" -exec cp {} public/videos/ \;
+          echo "Videos copied to public/videos"
+
+      # 9️⃣ Publicar resultados en GitHub Pages
+      - name: 🚀 Publish to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
+          publish_branch: gh-pages
